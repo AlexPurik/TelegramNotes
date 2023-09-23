@@ -36,6 +36,7 @@ class NoteTable(Base):
     title = Column(String, nullable=False)
     content = Column(String)
     folder_id = Column(Integer, ForeignKey("folders.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
     folder = relationship("FolderTable", back_populates="notes")
 
 

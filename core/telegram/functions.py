@@ -96,6 +96,10 @@ async def delete_message_after_minutes(chat_id, message_id, minutes: int = 5):
     )
 
 
+async def revoke_message_id(user_id: int, content: str):
+    note = Note(user_id=user_id, content=content)
+
+
 async def delete_message(chat_id, message_id):
     print(f"deleting message {message_id}")
     await bot.delete_message(chat_id=chat_id, message_id=message_id)

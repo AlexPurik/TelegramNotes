@@ -12,6 +12,12 @@ router = Router()
 @router.message()
 async def messages_handler(message: types.Message):
     user_id = message.chat.id
+    forward_from = message.forward_from
+
+    if forward_from:
+        if forward_from.id == user_id:
+            await func.revoke_message_id(user_id=user_id)
+
     status = await db.get_status(user_id=user_id)
     print("status:", status)
     if status == C.status_empty or status == None:
@@ -36,13 +42,6 @@ async def messages_handler(message: types.Message):
 
             to_instruct = True
 
-        else:
-            adding_rule = await db.get_rule_adding(user_id=user_id)
-
-            if adding_rule == True:
-                new_content = note.content + "\n\n" + text
-                await note.update_content(new_content=new_content)
-
         await func.display_note(
             user_id=user_id,
             message_id=message_id_to_edit,
@@ -54,7 +53,7 @@ async def messages_handler(message: types.Message):
         if to_instruct:
             mes_id_to_del = await db.get_buttons_message_id(user_id=user_id) + 1
             await message.answer(
-                text="Чтобы отредактировать заметку, перейдите к прикреплённому сообщению и измените его.\nТекст заметки автоматически изменится",
+                text="Чтобы отредактировать заметку, перейдите к прикреплённому сообщению и измените его.\n\n- Текст заметки автоматически изменится\n\n❕Если после какого-то времени редактирование этого сообщения станет недоступным, просто перешлите его в этого бота",
                 reply_markup=buttons.ok,
             )
             await func.delete_message_after_minutes(minutes=3, chat_id=user_id, message_id=mes_id_to_del)
@@ -96,13 +95,20 @@ async def messages_handler(message: types.Message):
 @router.edited_message(F.from_user.id != bot.id)
 async def edit_messages_handler(message: types.Message):
     user_id = message.chat.id
-    # status = await db.get_status(user_id=user_id)
+    status = await db.get_status(user_id=user_id)
 
     text = message.html_text
     note_messages_ids = await db.get_notes_messages_ids(user_id=user_id)
-
+    print(message.message_id, note_messages_ids)
     if message.message_id in note_messages_ids:
         note = await Note(message_id=message.message_id, user_id=user_id).connect()
         await note.update_content(new_content=text)
-        message_id_to_edit = await db.get_buttons_message_id(user_id=user_id)
-        await func.display_note(user_id=user_id, message_id=message_id_to_edit, note_id=note.id)
+
+        # Если какая-то записка сейчас уже открыта в боте
+        if status.startswith(C.status_updating_note):
+            updating_note_id = int(status.removeprefix(C.status_updating_note))
+
+            # Если в боте сейчас открыта, только что отредактированная, записка
+            if updating_note_id == note.id:
+                message_id_to_edit = await db.get_buttons_message_id(user_id=user_id)
+                await func.display_note(user_id=user_id, message_id=message_id_to_edit, note_id=note.id)

@@ -13,11 +13,19 @@ session = Session()
 
 
 class Note:
-    def __init__(self, folder_id: int = None, id: int = None, message_id: str = None, user_id: int = None):
+    def __init__(
+        self,
+        folder_id: int = None,
+        id: int = None,
+        message_id: str = None,
+        user_id: int = None,
+        content: str = None,
+    ):
         self.id = id
         self.folder_id = folder_id
         self.message_id = message_id
         self.user_id = user_id
+        self.content = content
 
     async def connect(self):
         """
@@ -32,6 +40,7 @@ class Note:
                     content=C.default_note_content,
                     folder_id=self.folder_id,
                     message_id=self.message_id,
+                    user_id=self.user_id,
                 )
                 session.add(self.__note)
                 await session.commit()
@@ -43,11 +52,17 @@ class Note:
                     result = await session.execute(q)
                     note = result.fetchone()
 
-                elif self.message_id and self.user_id:
-                    q = select(db.FolderTable.id).where(db.FolderTable.user_id == self.user_id)
-                    folders_ids = await session.execute(q).fetchall()
+                elif self.message_id:
+                    q = select(db.NoteTable).where(
+                        db.NoteTable.message_id == self.message_id and db.NoteTable.user_id == self.user_id
+                    )
+                    result = await session.execute(q)
+                    note = result.fetchone()
 
-                    q = select(db.NoteTable).filter(db.NoteTable.folder_id.in_(folders_ids))
+                elif self.content and self.user_id:
+                    q = select(db.NoteTable).where(
+                        db.NoteTable.content == self.content and db.NoteTable.user_id == self.user_id
+                    )
                     result = await session.execute(q)
                     note = result.fetchone()
 
@@ -61,6 +76,7 @@ class Note:
                         content=C.default_note_content,
                         folder_id=self.folder_id,
                         message_id=self.message_id,
+                        user_id=self.user_id,
                     )
                     session.add(self.__note)
                     await session.commit()

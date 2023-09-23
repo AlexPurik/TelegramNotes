@@ -159,7 +159,7 @@ async def handle_callback_query(callback_query: types.CallbackQuery):
 
     elif data.startswith(C.data_new_note):
         folder_id = data.removeprefix(C.data_new_note)
-        note = Note(folder_id=folder_id)
+        note = Note(user_id=user_id, folder_id=folder_id)
         await note.connect()
         await callback_query.answer(text="Напишите имя заметки", show_alert=True)
         await func.display_notes_keyboard(user_id=user_id, message_id=message_id, folder_id=folder_id)
@@ -214,7 +214,7 @@ async def handle_callback_query(callback_query: types.CallbackQuery):
     elif data.startswith(C.data_edit_note):
         note_id = data.removeprefix(C.data_edit_note)
         btn = callback_query.message.reply_markup
-        for kb in btn.inline_keyboard[1:]:
+        for kb in btn.inline_keyboard:
             for b in kb:
                 folder_to_edit_data = f"{C.data_edit_note}{note_id}"
                 dat = b.callback_data
